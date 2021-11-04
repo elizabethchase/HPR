@@ -1,11 +1,28 @@
 Package: HPR
 Type: Package
-Title: What the Package Does (Title Case)
+Title: Horseshoe Process Regression
 Version: 0.1.0
-Author: Who wrote it
-Maintainer: The package maintainer <yourself@somewhere.net>
-Description: More about what it does (maybe more than one line)
-    Use four spaces when indenting paragraphs within the Description.
-License: What license is it under?
+Authors@R: 
+    person(given = "Elizabeth",
+           middle = "C",
+           family = "Chase",
+           role = c("aut", "cre"),
+           email = "ecchase@umich.edu",
+           comment = c(ORCID = "0000-0003-0452-2976"))
+Description: HPR performs horseshoe process regression, as described in the article by Chase et al. (2023). HPR is an analogue to Gaussian process regression (GPR), but intended for more abruptly-varying functions, like step functions, than can be modeled by GPR. It allows for normal, Poisson, and binomial outcome data, with a mixture of HPR and linear predictors, which can be constrained to be monotonic increasing or decreasing. For more information, see Chase et al. (2023) and the vignette. 
+License: GPL-3
 Encoding: UTF-8
 LazyData: true
+Depends: 
+    R (>= 4.0)
+Imports: 
+    dplyr,
+    cmdstanr,
+    posterior,
+    mgcv,
+    stats,
+    knitr,
+    Rdpack
+VignetteBuilder: knitr
+RdMacros: Rdpack
+RoxygenNote: 7.1.1
