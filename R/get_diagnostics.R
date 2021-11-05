@@ -26,7 +26,8 @@ get_diagnostics <- function(object = NULL,
                                   "Min_Ess_Bulk" = min(sum_stats$ess_bulk),
                                   "Min_Ess_Tail" = min(sum_stats$ess_tail),
                                   "Num_Param" = nrow(sum_stats),
-                                  "Num_Samples" = nrow(diagnostics_df)
+                                  "Num_Samples" = nrow(diagnostics_df),
+                                  "Time" = object$run_time
                                   )
 
   return(diagnostics_table)
