@@ -8,6 +8,7 @@
 #' @examples
 #'
 #' @importFrom dplyr near select
+#' @importFrom stats plogis quantile
 #' @importFrom posterior as_draws_df
 #' @importFrom mgcv rmvn
 #' @import cmdstanr
@@ -64,10 +65,10 @@ get_f <- function(object = NULL,
                               "Upper" = exp(apply(my_summary, MARGIN = 2, FUN = quantile, upper)),
                               "x" = object$grid)
       } else if (family=="binomial"){
-        curve_fit <- data.frame("Median" = expit(apply(my_summary, MARGIN = 2, FUN = quantile, 0.5)),
-                              "Mean" = expit(apply(my_summary, MARGIN = 2, FUN = mean)),
-                              "Lower" = expit(apply(my_summary, MARGIN = 2, FUN = quantile, lower)),
-                              "Upper" = expit(apply(my_summary, MARGIN = 2, FUN = quantile, upper)),
+        curve_fit <- data.frame("Median" = plogis(apply(my_summary, MARGIN = 2, FUN = quantile, 0.5)),
+                              "Mean" = plogis(apply(my_summary, MARGIN = 2, FUN = mean)),
+                              "Lower" = plogis(apply(my_summary, MARGIN = 2, FUN = quantile, lower)),
+                              "Upper" = plogis(apply(my_summary, MARGIN = 2, FUN = quantile, upper)),
                               "x" = object$grid)
       }
     } else {
@@ -87,10 +88,10 @@ get_f <- function(object = NULL,
         }
       } else if (family=="binomial"){
         for (i in 1:k){
-          subdat <- data.frame("Median" = expit(apply(my_summary[,(m[i]+1):(m[i] + m[i+1])], MARGIN = 2, FUN = quantile, 0.5)),
-                               "Mean" = expit(apply(my_summary[,(m[i]+1):(m[i] + m[i+1])], MARGIN = 2, FUN = mean)),
-                               "Lower" = expit(apply(my_summary[,(m[i]+1):(m[i] + m[i+1])], MARGIN = 2, FUN = quantile, lower)),
-                               "Upper" = expit(apply(my_summary[,(m[i]+1):(m[i] + m[i+1])], MARGIN = 2, FUN = quantile, upper)),
+          subdat <- data.frame("Median" = plogis(apply(my_summary[,(m[i]+1):(m[i] + m[i+1])], MARGIN = 2, FUN = quantile, 0.5)),
+                               "Mean" = plogis(apply(my_summary[,(m[i]+1):(m[i] + m[i+1])], MARGIN = 2, FUN = mean)),
+                               "Lower" = plogis(apply(my_summary[,(m[i]+1):(m[i] + m[i+1])], MARGIN = 2, FUN = quantile, lower)),
+                               "Upper" = plogis(apply(my_summary[,(m[i]+1):(m[i] + m[i+1])], MARGIN = 2, FUN = quantile, upper)),
                                "x" = object$grid[[i]],
                                "Predictor" = i
           )

@@ -32,7 +32,7 @@
 #' @examples
 #'
 #' @importFrom dplyr near case_when
-#' @importFrom stats quantile sd
+#' @importFrom stats quantile sd plogis qlogis
 #' @import cmdstanr
 #' @export
 hpr <- function(y = NULL,
@@ -283,8 +283,8 @@ hpr <- function(y = NULL,
        y_obs==0 ~ 0.005
      )
 
-     dat$samp_mean <- logit(mean(trunc_y))
-     dat$samp_sd = sd(logit(trunc_y))
+     dat$samp_mean <- qlogis(mean(trunc_y))
+     dat$samp_sd = sd(qlogis(trunc_y))
 
      if (ncol(X) > 1){
        mymodel <- cmdstan_model(system.file("stan", "binomial_multi.stan", package = "HPR"))

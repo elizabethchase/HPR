@@ -9,6 +9,7 @@
 #'
 #' @importFrom dplyr near select
 #' @importFrom posterior as_draws_df
+#' @importFrom stats plogis quantile
 #' @import cmdstanr
 #' @export
 get_preds <- function(object = NULL,
@@ -31,10 +32,10 @@ get_preds <- function(object = NULL,
                             "Lower" = exp(apply(my_summary, MARGIN = 2, FUN = quantile, lower)),
                             "Upper" = exp(apply(my_summary, MARGIN = 2, FUN = quantile, upper)))
   } else if (family=="binomial"){
-    preds <- data.frame("Median" = expit(apply(my_summary, MARGIN = 2, FUN = quantile, 0.5)),
-                            "Mean" = expit(apply(my_summary, MARGIN = 2, FUN = mean)),
-                            "Lower" = expit(apply(my_summary, MARGIN = 2, FUN = quantile, lower)),
-                            "Upper" = expit(apply(my_summary, MARGIN = 2, FUN = quantile, upper)))
+    preds <- data.frame("Median" = plogis(apply(my_summary, MARGIN = 2, FUN = quantile, 0.5)),
+                            "Mean" = plogis(apply(my_summary, MARGIN = 2, FUN = mean)),
+                            "Lower" = plogis(apply(my_summary, MARGIN = 2, FUN = quantile, lower)),
+                            "Upper" = plogis(apply(my_summary, MARGIN = 2, FUN = quantile, upper)))
   }
 
   return(preds)

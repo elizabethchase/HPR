@@ -10,6 +10,7 @@
 #'
 #' @importFrom dplyr near select
 #' @importFrom posterior as_draws_df
+#' @importFrom stats plogis quantile
 #' @import cmdstanr
 #' @export
 get_betas <- function(object = NULL,
@@ -34,10 +35,10 @@ get_betas <- function(object = NULL,
                              "Upper" = apply(my_summary, MARGIN = 2, quantile, upper))
   } else if (family=="binomial"){
     beta_preds <- data.frame("Variable" = var_names,
-                             "Median" = expit(apply(my_summary, MARGIN = 2, quantile, 0.5)),
-                             "Mean" = expit(apply(my_summary, MARGIN = 2, mean)),
-                             "Lower" = expit(apply(my_summary, MARGIN = 2, quantile, lower)),
-                             "Upper" = expit(apply(my_summary, MARGIN = 2, quantile, upper)))
+                             "Median" = plogis(apply(my_summary, MARGIN = 2, quantile, 0.5)),
+                             "Mean" = plogis(apply(my_summary, MARGIN = 2, mean)),
+                             "Lower" = plogis(apply(my_summary, MARGIN = 2, quantile, lower)),
+                             "Upper" = plogis(apply(my_summary, MARGIN = 2, quantile, upper)))
   } else if (family=="poisson"){
     beta_preds <- data.frame("Variable" = var_names,
                              "Median" = exp(apply(my_summary, MARGIN = 2, quantile, 0.5)),
