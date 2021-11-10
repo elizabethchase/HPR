@@ -283,10 +283,9 @@ hpr <- function(y = NULL,
        y_obs==0 ~ 0.005
      )
 
-     #dat$samp_mean <- qlogis(mean(trunc_y))
-     #dat$samp_sd = sd(qlogis(trunc_y))
-      dat$samp_mean <- 0
-      dat$samp_sd <- 0.5
+     dat$samp_mean <- qlogis(mean(trunc_y))
+     dat$samp_sd = sd(qlogis(trunc_y))
+
      if (ncol(X) > 1){
        mymodel <- cmdstan_model(system.file("stan", "binomial_multi.stan", package = "HPR"))
        model_file <- "binomial_multi.stan"
@@ -295,10 +294,9 @@ hpr <- function(y = NULL,
        model_file <- "binomial_uni.stan"
      }
    } else if (family=="poisson"){
-     #dat$samp_mean <- log(mean(y_obs))
-     #dat$samp_sd = sd(log(y_obs+0.5))
-      dat$samp_mean <- 0
-      dat$samp_sd <- sd(y_obs)
+     dat$samp_mean <- log(mean(y_obs))
+     dat$samp_sd = sd(log(y_obs+0.5))
+
      if (ncol(X) > 1){
        mymodel <- cmdstan_model(system.file("stan", "poisson_multi.stan", package = "HPR"))
        model_file <- "poisson_multi.stan"
