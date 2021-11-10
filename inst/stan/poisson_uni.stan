@@ -52,14 +52,14 @@ transformed parameters {
     } else{
       eta[2:m] = tau_glob * lambda .* gamma_aux .* sqrt_diff;
     }
-    path = alpha + cumulative_sum(eta); //added alpha
+    path = alpha + cumulative_sum(eta);
     if (has_covs==0){
-      f = path[ind]; //deleted alpha
+      f = path[ind];
     } else{
-      f = X*beta + path[ind]; //deleted alpha
+      f = X*beta + path[ind];
     }
     if (N_mis > 0){
-       y_mis = y_mis_aux*samp_sd + path[missing_ind]; //deleted alpha
+       y_mis = y_mis_aux*samp_sd + path[missing_ind];
     }
 }
 
