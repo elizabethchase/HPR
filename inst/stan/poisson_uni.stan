@@ -39,7 +39,6 @@ transformed parameters {
   vector[m] eta;
   vector[m] path;
   vector[N_obs] f;
-  vector[N_obs] mu; //new
   vector[N_mis] y_mis;
     eta[1] = 0;
     lambda = lambda_loc1 .* sqrt(lambda_loc2);
@@ -62,7 +61,6 @@ transformed parameters {
     if (N_mis > 0){
        y_mis = y_mis_aux*samp_sd + alpha + path[missing_ind];
     }
-    mu = exp(f); //new
 }
 
 model {
@@ -73,7 +71,6 @@ model {
     lambda_loc1 ~ std_normal();
     lambda_loc2 ~ inv_gamma(0.5*local_dof_stan, 0.5*local_dof_stan);
     gamma_aux ~ std_normal();
-    //y_obs ~ poisson_log(f);
-    y_obs ~ poisson(mu);
+    y_obs ~ poisson_log(f);
     y_mis_aux ~ std_normal();
 }
