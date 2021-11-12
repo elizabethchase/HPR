@@ -122,6 +122,9 @@ hpr <- function(y = NULL,
     if (aug_approach != "MCMC" & family=="gaussian"){
       x_aug <- X_aug[[1]]
       x_aug2 <- setdiff(x_aug, x_obs)
+      if (min(x_aug2) < min(grid)){stop("If using LVCF or Mean imputation, the smallest
+                                        augmented value must be greater than or
+                                        equal to the smallest observed value.")}
       N_mis <- length(x_aug2)
       nearest <- rep(NA, N_mis)
       miss_diff <- rep(NA, N_mis)
