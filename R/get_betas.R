@@ -35,10 +35,10 @@ get_betas <- function(object = NULL,
                              "Upper" = apply(my_summary, MARGIN = 2, quantile, upper))
   } else if (family=="binomial"){
     beta_preds <- data.frame("Variable" = var_names,
-                             "Median" = plogis(apply(my_summary, MARGIN = 2, quantile, 0.5)),
-                             "Mean" = plogis(apply(my_summary, MARGIN = 2, mean)),
-                             "Lower" = plogis(apply(my_summary, MARGIN = 2, quantile, lower)),
-                             "Upper" = plogis(apply(my_summary, MARGIN = 2, quantile, upper)))
+                             "Median" = exp(apply(my_summary, MARGIN = 2, quantile, 0.5)),
+                             "Mean" = exp(apply(my_summary, MARGIN = 2, mean)),
+                             "Lower" = exp(apply(my_summary, MARGIN = 2, quantile, lower)),
+                             "Upper" = exp(apply(my_summary, MARGIN = 2, quantile, upper)))
   } else if (family=="poisson"){
     beta_preds <- data.frame("Variable" = var_names,
                              "Median" = exp(apply(my_summary, MARGIN = 2, quantile, 0.5)),
