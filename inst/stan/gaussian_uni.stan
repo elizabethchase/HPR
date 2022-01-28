@@ -32,8 +32,6 @@ parameters {
   vector[m-1] gamma_aux;
   vector<lower = 0.0>[m-1] lambda_loc1;
   vector<lower = 0.0>[m-1] lambda_loc2;
-  vector[N_mis] y_mis_aux;
-  //real<lower=0> daux;
 }
 
 transformed parameters {
@@ -43,7 +41,6 @@ transformed parameters {
   vector[m] eta;
   vector[m] path;
   vector[N_obs] f;
-  vector[N_mis] y_mis;
     eta[1] = 0;
     lambda = lambda_loc1 .* sqrt(lambda_loc2);
     tau_glob = tau_glob1 * sqrt(tau_glob2) * alpha_scale_stan;
@@ -63,9 +60,6 @@ transformed parameters {
     } else{
       f = X*beta + path[ind];
     }
-    if (N_mis > 0){
-       y_mis = y_mis_aux*sig + path[missing_ind];
-    }
 }
 
 model {
@@ -79,5 +73,4 @@ model {
     sig2 ~ inv_gamma(0.5, 0.5);
     gamma_aux ~ std_normal();
     y_obs ~ normal(f, sig);
-    y_mis_aux ~ normal(0, 1);
 }

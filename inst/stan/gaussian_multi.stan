@@ -37,7 +37,6 @@ parameters {
   matrix[max_m-1,k] gamma_aux;
   matrix<lower = 0.0>[max_m-1,k] lambda_loc1;
   matrix<lower = 0.0>[max_m-1,k] lambda_loc2;
-  vector[N_mis] y_mis_aux;
 }
 
 transformed parameters {
@@ -50,7 +49,6 @@ transformed parameters {
   matrix[N_mis,k] miss_path;
   vector[max_m] finalpath;
   vector[N_obs] f;
-  vector[N_mis] y_mis;
     eta[1,] = rep_row_vector(0,k);
     lambda = lambda_loc1 .* sqrt(lambda_loc2);
     tau_glob = tau_glob1 .* sqrt(tau_glob2) * alpha_scale_stan;
@@ -91,9 +89,6 @@ transformed parameters {
     } else{
       f = alpha + X*beta + finalpath;
     }
-    if (N_mis > 0){
-       y_mis = y_mis_aux*sig + miss_path*rep_vector(1,k);
-    }
 }
 
 model {
@@ -109,5 +104,4 @@ model {
     sig1 ~ std_normal();
     sig2 ~ inv_gamma(0.5, 0.5);
     y_obs ~ normal(f, sig);
-    y_mis_aux ~ std_normal();
 }
