@@ -16,6 +16,13 @@ data {
   int<lower=0,upper=1> exp_approach;
   real samp_mean;
   real samp_sd;
+  vector[p] beta_mean;
+  vector[p] beta_sd;
+  vector<lower=1.0>[p] beta_df;
+  int<lower=0,upper=1> cauchy_beta;
+  int<lower=0> N_new;
+  int<lower=1, upper=m> new_ind[N_new];
+  matrix[N_new, p] new_X;
 }
 
 transformed data {
@@ -24,7 +31,8 @@ transformed data {
 
 parameters {
   real alpha;
-  vector[p] beta;
+  vector[p] beta_sub1;
+  vector<lower = 0.0>[p] beta_sub2;
   real<lower = 0.0> tau_glob1;
   real<lower = 0.0> tau_glob2;
   vector[m-1] gamma_aux;
@@ -38,6 +46,12 @@ transformed parameters {
   vector[m] eta;
   vector[m] path;
   vector[N_obs] f;
+  vector[p] beta;
+    if (cauchy_beta){
+      beta = ((5 * beta_sd .* beta_sub1) ./ sqrt(beta_sub2)) + beta_mean;
+    } else{
+      beta = (5 * beta_sd .* beta_sub1) + beta_mean;
+    }
     eta[1] = 0;
     lambda = lambda_loc1 .* sqrt(lambda_loc2);
     tau_glob = tau_glob1 * sqrt(tau_glob2) * alpha_scale_stan;
@@ -60,7 +74,8 @@ transformed parameters {
 
 model {
     alpha ~ normal(samp_mean, 5*samp_sd);
-    beta ~ normal(0, 5);
+    beta_sub1 ~ std_normal();
+    beta_sub2 ~ gamma(0.5*beta_df, 0.5*beta_df);
     tau_glob1 ~ std_normal();
     tau_glob2 ~ inv_gamma(0.5*global_dof_stan, 0.5*global_dof_stan);
     lambda_loc1 ~ std_normal();

@@ -83,3 +83,12 @@ model {
     gamma_aux ~ std_normal();
     y_obs ~ bernoulli_logit(f);
 }
+
+generated quantities{
+  int<lower=0, upper=1> new_pred[N_new];
+  if (has_covs==0){
+    new_pred = bernoulli_logit_rng(path[new_ind]);
+  } else{
+    new_pred = bernoulli_logit_rng(path[new_ind] + new_X*beta);
+  }
+}

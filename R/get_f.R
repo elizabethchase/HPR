@@ -72,7 +72,7 @@ get_f <- function(object = NULL,
                               "x" = object$grid)
       }
     } else {
-      my_summary <- dplyr::select(as_draws_df(object$stan_object$draws("path")), -.chain, -.iteration, -.draw)
+      my_summary <- dplyr::select(as_draws_df(object$stan_object$draws("finalpath")), -.chain, -.iteration, -.draw)
       m <- c(0,m)
       curve_fit <- data.frame("Median" = NA, "Mean" = NA, "Lower" = NA, "Upper" = NA, "x" = NA, "Predictor" = NA)
       if (family=="gaussian"){

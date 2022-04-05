@@ -120,3 +120,21 @@ model {
     sig2 ~ inv_gamma(0.5, 0.5);
     y_obs ~ normal(f, sig);
 }
+
+generated quantities{
+  matrix[N_new,k] new_path;
+  vector[N_new] new_finalpath;
+  vector[N_new] new_f;
+  real new_pred[N_new];
+
+  for (i in 1:k){
+      new_path[,i] = path[new_ind[,i],i];
+  }
+  new_finalpath = alpha + new_path*rep_vector(1,k);
+  if (has_covs==0){
+    new_f = new_finalpath;
+  } else{
+    new_f = new_X*beta + new_finalpath;
+  }
+  new_pred = normal_rng(new_f, sig);
+}

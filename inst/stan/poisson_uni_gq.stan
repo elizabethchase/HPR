@@ -1,7 +1,7 @@
 data {
   int<lower=0> N_obs;
   int<lower=0> N_mis;
-  int<lower = 0, upper=1> y_obs[N_obs];
+  int<lower=0> y_obs[N_obs];
   int<lower=0> m;
   int<lower = 1, upper = m> ind[N_obs];
   int<lower = 1, upper = m> missing_ind[N_mis];
@@ -81,5 +81,14 @@ model {
     lambda_loc1 ~ std_normal();
     lambda_loc2 ~ inv_gamma(0.5*local_dof_stan, 0.5*local_dof_stan);
     gamma_aux ~ std_normal();
-    y_obs ~ bernoulli_logit(f);
+    y_obs ~ poisson_log(f);
+}
+
+generated quantities{
+  int<lower=0> new_pred[N_new];
+  if (has_covs==0){
+    new_pred = poisson_log_rng(path[new_ind]);
+  } else{
+    new_pred = poisson_log_rng(path[new_ind] + new_X*beta);
+  }
 }

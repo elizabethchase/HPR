@@ -1,7 +1,7 @@
 data {
   int<lower=0> N_obs;
   int<lower=0> N_mis;
-  real y_obs[N_obs];
+  int<lower=0> y_obs[N_obs];
   int<lower = 2> k;
   int<lower=0> m[k];
   int<lower=0> max_m;
@@ -40,8 +40,6 @@ parameters {
   vector<lower = 0.0>[p] beta_sub2;
   vector<lower = 0.0>[k] tau_glob1;
   vector<lower = 0.0>[k] tau_glob2;
-  real<lower=0> sig1;
-  real<lower = 0.0> sig2;
   matrix[max_m-1,k] gamma_aux;
   matrix<lower = 0.0>[max_m-1,k] lambda_loc1;
   matrix<lower = 0.0>[max_m-1,k] lambda_loc2;
@@ -49,7 +47,6 @@ parameters {
 
 transformed parameters {
   vector[k] tau_glob;
-  real sig;
   matrix[max_m-1,k] lambda;
   matrix[max_m,k] eta;
   matrix[max_m,k] path;
@@ -66,7 +63,6 @@ transformed parameters {
     eta[1,] = rep_row_vector(0,k);
     lambda = lambda_loc1 .* sqrt(lambda_loc2);
     tau_glob = tau_glob1 .* sqrt(tau_glob2) * alpha_scale_stan;
-    sig = sig1 * sqrt(sig2) * 5;
     if (is_monotone){
       if (exp_approach){
         for (i in 1:q){
@@ -116,7 +112,23 @@ model {
       lambda_loc2[,i] ~ inv_gamma(0.5*local_dof_stan, 0.5*local_dof_stan);
       gamma_aux[,i] ~ std_normal();
     }
-    sig1 ~ std_normal();
-    sig2 ~ inv_gamma(0.5, 0.5);
-    y_obs ~ normal(f, sig);
+    y_obs ~ poisson_log(f);
+}
+
+generated quantities{
+  matrix[N_new,k] new_path;
+  vector[N_new] new_finalpath;
+  vector[N_new] new_f;
+  int<lower = 0> new_pred[N_new];
+
+  for (i in 1:k){
+      new_path[,i] = path[new_ind[,i],i];
+  }
+  new_finalpath = alpha + new_path*rep_vector(1,k);
+  if (has_covs==0){
+    new_f = new_finalpath;
+  } else{
+    new_f = new_X*beta + new_finalpath;
+  }
+  new_pred = poisson_log_rng(new_f);
 }

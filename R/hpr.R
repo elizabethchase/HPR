@@ -15,9 +15,15 @@
 #' @param Z
 #' @param X_aug
 #' @param family
+#' @param beta_dist
+#' @param beta_mean
+#' @param beta_sd
+#' @param beta_df
 #' @param monotonic_terms
 #' @param monotonic_approach
 #' @param aug_approach
+#' @param new_X
+#' @param new_Z
 #' @param seed
 #' @param chains
 #' @param iter_warmup
@@ -39,10 +45,16 @@ hpr <- function(y = NULL,
                 X = NULL,
                 Z = NULL,
                 X_aug = NULL,
-                family = NULL,
+                family = "gaussian",
+                beta_dist = "normal",
+                beta_mean = NULL,
+                beta_sd = NULL,
+                beta_df = NULL,
                 monotonic_terms = NULL,
                 monotonic_approach = NULL,
                 aug_approach = "MCMC",
+                new_X = NULL,
+                new_Z = NULL,
                 seed = NULL,
                 chains = 4,
                 iter_warmup = 1000,
@@ -65,6 +77,24 @@ hpr <- function(y = NULL,
     if ((is.character(Z) | is.logical(Z))){stop("Z must be numeric or integer.")}
     if (!near(length(y), nrow(Z))){stop("y must be the same length as the number of rows in Z!")}
     if (!near(nrow(Z), nrow(X))){stop("X and Z must have the same number of rows!")}
+    if (!is.null(beta_mean) & !near(length(beta_mean), ncol(Z))){stop("beta_mean must have the
+                                                                      same number of entries as the
+                                                                      number of columns in Z!")}
+    if (!is.null(beta_sd) & !near(length(beta_sd), ncol(Z))){stop("beta_sd must have the
+                                                                      same number of entries as the
+                                                                      number of columns in Z!")}
+    if (!is.null(beta_df) & !near(length(beta_df), ncol(Z))){stop("beta_df must have the
+                                                                      same number of entries as the
+                                                                      number of columns in Z!")}
+    if (is.null(beta_mean)){
+      beta_mean <- rep(0.0, ncol(Z))
+    }
+    if (is.null(beta_sd)){
+      beta_sd <- apply(Z, 2, sd)
+    }
+    if (is.null(beta_df)){
+      beta_df <- rep(1.0, ncol(Z))
+    }
   }
 
   if (!is.null(X_aug)){
@@ -83,6 +113,30 @@ hpr <- function(y = NULL,
   {"Augmentation approaches other than MCMC are not recommended, and are only implemented for Gaussian outcomes and
     a single, non-monotonic horseshoe smoothing term."}
 
+  if(aug_approach != "MCMC" & !is.null(new_X)){stop("Additional predictions cannot be generated for models that rely on interpolated augmentation!")}
+  if(aug_approach != "MCMC" & !is.null(new_Z)){stop("Additional predictions cannot be generated for models that rely on interpolated augmentation!")}
+
+  if(is.null(Z) & !is.null(new_Z)){warning("No Z was inputted, so new_Z will not be used.")}
+  if(!is.null(Z) & !is.null(new_X) & is.null(new_Z)){stop("This model has linear predictors--please input a matrix new_Z.")}
+
+  if (!is.null(new_X)){
+    if(!near(ncol(new_X), ncol(X))){stop(paste0("new_X has ", ncol(new_X), " columns, but orig_X has ", ncol(orig_X),
+                                                " columns. They should have the same number of columns."))}
+
+    for (i in 1:ncol(X)){
+      if(!near(length(setdiff(new_X[i], X[i])),0)){stop(paste0("All elements of new_X must already appear in the
+                                                                 corresponding column of X. Column ", i, " of
+                                                                 new_X has an element that is not in X. To get
+                                                                 predictions at unobserved locations, use the X_aug
+                                                                 argument of hpr."))}
+    }
+  }
+
+  if (!is.null(new_Z)){
+    if(!near(nrow(new_X), nrow(new_Z))){stop("new_X and new_Z must have the same number of rows!")}
+    if(!near(ncol(Z), ncol(new_Z))){stop("new_Z should have ", ncol(Z), " columns, but it has ", ncol(new_Z), " columns.")}
+  }
+
   N_obs <- nrow(X)
   y_obs <- y
   #y <- as.numeric(scale(mydata$Visits_twovar, scale = FALSE))
@@ -90,11 +144,39 @@ hpr <- function(y = NULL,
   if (!is.null(Z)){
     p <- ncol(Z)
     covariates <- as.matrix(scale(Z, scale = FALSE))
+    scale_means <- colMeans(Z)
     has_covs <- 1
+    if(beta_dist=="cauchy"){
+      cauchy_beta <- 1
+    } else{
+      cauchy_beta <- 0
+    }
+    if (is.null(new_Z)){
+      N_new <- 1
+      new_covariates <- as.matrix(covariates[1,], nrow = 1)
+    } else{
+      N_new <- nrow(new_Z)
+      scale_new_Z <- matrix(NA, nrow = nrow(new_Z), ncol = ncol(new_Z))
+      for (i in 1:ncol(Z)){
+        scale_new_Z[,i] <- new_Z[,i] - scale_means[i]
+      }
+      new_covariates <- as.matrix(scale_new_Z)
+    }
   } else{
     p <- 1
     covariates <- as.matrix(rep(0, N_obs), nrow = N_obs, ncol = 1)
     has_covs <- 0
+    cauchy_beta <- 0
+    beta_mean <- 0
+    beta_sd <- 1
+    beta_df <- 1
+    if (is.null(new_X)){
+      N_new <- 1
+      new_covariates <- as.matrix(rep(0, N_new), nrow = N_new, ncol = 1)
+    } else{
+      N_new <- nrow(new_X)
+      new_covariates <- as.matrix(rep(0, N_new), nrow = N_new, ncol = 1)
+    }
   }
 
   if (ncol(X) < 2){
@@ -118,6 +200,14 @@ hpr <- function(y = NULL,
     if (!is.null(x_aug) & aug_approach=="MCMC"){
      missing_ind <- setdiff(c(1:m), ind)
      N_mis <- length(missing_ind)
+    }
+    if (!is.null(new_X) & aug_approach=="MCMC"){
+      new_ind <- rep(NA, nrow = N_new)
+      for (i in 1:N_new){
+        new_ind[i] <- max(which((new_X[i,1] >= grid) | near(new_X[i,1], grid)))
+      }
+    } else{
+      new_ind <- 1
     }
     if (aug_approach != "MCMC" & family=="gaussian"){
       x_aug <- X_aug[[1]]
@@ -158,7 +248,10 @@ hpr <- function(y = NULL,
         global_dof_stan = 1,
         alpha_scale_stan = c,
         is_monotone = is_monotone,
-        exp_approach = exp_approach
+        exp_approach = exp_approach,
+        N_new = N_new,
+        new_ind = new_ind,
+        new_X = new_covariates
       )
     } else if (aug_approach!="MCMC"){
       dat <- list(
@@ -183,6 +276,7 @@ hpr <- function(y = NULL,
     k <- ncol(X)
     m <- rep(NA, k)
     ind <- matrix(NA, nrow = N_obs, ncol = k)
+    new_ind <- matrix(NA, nrow = N_new, ncol = k)
     grid <- vector("list", length = k)
     for (i in 1:k){
       x_aug <- X_aug[[i]]
@@ -193,6 +287,13 @@ hpr <- function(y = NULL,
       m[i] <- length(grid[[i]])
       for (j in 1:length(x_obs)){
         ind[j,i] <- max(which((x_obs[j] >= grid[[i]]) | near(x_obs[j], grid[[i]])))
+      }
+      if (!is.null(new_X)){
+        for (j in 1:N_new){
+          new_ind[j,i] <- max(which((new_X[j, i] >= grid[[i]]) | near(new_X[j, i], grid[[i]])))
+        }
+      } else {
+        new_ind <- matrix(rep(1, k), nrow = 1, ncol = k)
       }
     }
     max_m <- max(m)
@@ -256,7 +357,10 @@ hpr <- function(y = NULL,
                  exp_approach = exp_approach,
                  q = q,
                  monotone_inds = monotone_inds,
-                 nonmonotone_inds = nonmonotone_inds
+                 nonmonotone_inds = nonmonotone_inds,
+                 N_new = N_new,
+                 new_ind = new_ind,
+                 new_X = new_covariates
     )
   }
 
@@ -266,10 +370,18 @@ hpr <- function(y = NULL,
      if (ncol(X) > 1){
        mymodel <- cmdstan_model(system.file("stan", "gaussian_multi.stan", package = "HPR"))
        model_file <- "gaussian_multi.stan"
+       dat$beta_mean <- beta_mean
+       dat$beta_sd <- beta_sd
+       dat$beta_df <- beta_df
+       dat$cauchy_beta <- cauchy_beta
      } else{
        if (aug_approach=="MCMC"){
          mymodel <- cmdstan_model(system.file("stan", "gaussian_uni.stan", package = "HPR"))
          model_file <- "gaussian_uni.stan"
+         dat$beta_mean <- beta_mean
+         dat$beta_sd <- beta_sd
+         dat$beta_df <- beta_df
+         dat$cauchy_beta <- cauchy_beta
        } else if (aug_approach=="LVCF"){
          mymodel <- cmdstan_model(system.file("stan", "gaussian_uni_interp.stan", package = "HPR"))
          model_file <- "gaussian_uni_interp.stan"
@@ -288,6 +400,10 @@ hpr <- function(y = NULL,
 
      dat$samp_mean <- qlogis(mean(trunc_y))
      dat$samp_sd = sd(qlogis(trunc_y))
+     dat$beta_mean <- beta_mean
+     dat$beta_sd <- beta_sd
+     dat$beta_df <- beta_df
+     dat$cauchy_beta <- cauchy_beta
 
      if (ncol(X) > 1){
        mymodel <- cmdstan_model(system.file("stan", "binomial_multi.stan", package = "HPR"))
@@ -299,6 +415,10 @@ hpr <- function(y = NULL,
    } else if (family=="poisson"){
      dat$samp_mean <- log(mean(y_obs))
      dat$samp_sd = sd(log(y_obs+0.5))
+     dat$beta_mean <- beta_mean
+     dat$beta_sd <- beta_sd
+     dat$beta_df <- beta_df
+     dat$cauchy_beta <- cauchy_beta
 
      if (ncol(X) > 1){
        mymodel <- cmdstan_model(system.file("stan", "poisson_multi.stan", package = "HPR"))
