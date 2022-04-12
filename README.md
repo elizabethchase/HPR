@@ -13,7 +13,7 @@ If your toolchain is configured correctly, then run: `install_cmdstan(cores = 2)
 To check that **cmdstan** was installed correctly, run: `cmdstan_path()` and `cmdstan_version()`.
 
 At this point, you should be all set. If you have trouble with any of the steps above, please
-see the **cmdstanr* documentation for more information:
+see the **cmdstanr** documentation for more information:
 
 - https://mc-stan.org/cmdstanr/
 
