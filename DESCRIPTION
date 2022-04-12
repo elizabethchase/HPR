@@ -9,7 +9,7 @@ Authors@R:
            role = c("aut", "cre"),
            email = "ecchase@umich.edu",
            comment = c(ORCID = "0000-0003-0452-2976"))
-Description: HPR performs horseshoe process regression, as described in the article by Chase et al. (2023). HPR is an analogue to Gaussian process regression (GPR), but intended for more abruptly-varying functions, like step functions, than can be modeled by GPR. It allows for normal, Poisson, and binomial outcome data, with a mixture of HPR and linear predictors, which can be constrained to be monotonic increasing or decreasing. For more information, see Chase et al. (2023) and the vignette. 
+Description: HPR performs horseshoe process regression, as described in the article by Chase et al. (2022+). HPR is an analogue to Gaussian process regression (GPR), but intended for more abruptly-varying functions, like step functions, than can be modeled by GPR. It allows for normal, Poisson, and binomial outcome data, with a mixture of HPR and linear predictors, which can be constrained to be monotonic increasing or decreasing. For more information, see Chase et al. (2022+) and the vignette. 
 License: GPL-3
 Encoding: UTF-8
 LazyData: true
@@ -25,4 +25,6 @@ Imports:
     Rdpack
 VignetteBuilder: knitr
 RdMacros: Rdpack
-RoxygenNote: 7.1.1
+RoxygenNote: 7.1.2
+Suggests: 
+    rmarkdown

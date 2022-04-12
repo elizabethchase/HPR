@@ -7,14 +7,33 @@
 get_betas(object = NULL, alpha = 0.05, var_names = NULL)
 }
 \arguments{
-\item{var_names}{}
+\item{object}{The results object from a run of hpr for which a matrix Z was input.}
+
+\item{alpha}{The uncertainty level for the betas; the
+default is 0.05 (which corresponds to 95\% credible intervals).}
+
+\item{var_names}{An optional character vector containing the variable names of the
+columns of Z.}
 }
 \value{
-
+A dataframe with a row for each beta and columns:
+\describe{
+   \item{Variable}{the name of the variable, if var_names was used}
+   \item{Mean}{the mean of the posterior samples of the beta}
+   \item{Median}{the median of the posterior samples of the beta}
+   \item{Lower}{the alpha/2 percentile of the posterior samples of the beta}
+   \item{Upper}{the 1-alpha/2 percentile of the posterior samples of the beta}
+}
 }
 \description{
 Function to extract the estimates of the linear coefficients from an HPR model
 }
 \examples{
+X <- as.matrix(dat$Day, ncol = 1)
+y <- dat$Temperature
+Z <- as.matrix(dat$Aberration, ncol = 1)
+
+mymodel <- hpr(y = y, X = X, Z = Z, family = "gaussian", beta_dist = "cauchy")
+mybetas <- get_betas(mymodel, var_names = c("Aberration"))
 
 }

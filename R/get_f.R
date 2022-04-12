@@ -1,11 +1,33 @@
-#' Function to extract the predicted horseshoe curve fits from an HPR model
+#' Function to extract the nonlinear component of a horseshoe model
 #'
-#' @param object
-#' @param alpha
+#' Function to extract only the nonlinear component of a predicted horseshoe curve fit
+#' from an HPR model at each unique, ordered value of X. If no Z matrix was used,
+#' get_f will return the same results as get_preds. If a Z matrix was used,
+#' get_f will return the nonlinear component estimated at the average value of each
+#' predictor in Z.
 #'
-#' @return
+#' @param object The results object from a run of hpr.
+#' @param alpha The uncertainty level for the nonlinear component of f; the
+#' default is 0.05 (which corresponds to 95\% credible intervals).
+#'
+#' @return A dataframe with m x q rows (corresponding to the unique, ordered values of each column of X)
+#' and columns:
+#' \describe{
+#'    \item{x}{The value of X}
+#'    \item{Median}{the median of the posterior samples of the nonlinear component}
+#'    \item{Mean}{the mean of the posterior samples of the nonlinear component}
+#'    \item{Lower}{the alpha/2 percentile of the posterior samples of the nonlinear component}
+#'    \item{Upper}{the 1-alpha/2 percentile of the posterior samples of the nonlinear component}
+#'    \item{Predictor}{if q > 1, then this gives the column index of X for which the nonlinear component
+#'    is being estimated}
+#' }
 #'
 #' @examples
+#' X <- as.matrix(dat$Day, ncol = 1)
+#' y <- dat$Temperature
+#'
+#' mymodel <- hpr(y = y, X = X, family = "gaussian")
+#' my_nonlin <- get_f(mymodel)
 #'
 #' @importFrom dplyr near select
 #' @importFrom stats plogis quantile

@@ -7,35 +7,82 @@
 #' horseshoe process terms, if desired. At present, this model is implemented for
 #' q = 1 or 2, although future versions may permit higher values for q.
 #' If the predictor(s) X are sparsely distributed over their domain, it may be
-#' wise to add some additional augmented data to even the grid of X or to obtain
-#' predictions/interpolations where desired. More information can be found in Chase et al. (2023).
+#' wise to add some additional augmented data to even out the grid of X or to obtain
+#' predictions/interpolations where desired. More information can be found in Chase et al. (2022+).
 #'
-#' @param y
-#' @param X
-#' @param Z
-#' @param X_aug
-#' @param family
-#' @param beta_dist
-#' @param beta_mean
-#' @param beta_sd
-#' @param beta_df
-#' @param monotonic_terms
-#' @param monotonic_approach
-#' @param aug_approach
-#' @param new_X
-#' @param new_Z
-#' @param seed
-#' @param chains
-#' @param iter_warmup
-#' @param iter_sampling
-#' @param max_treedepth
-#' @param adapt_delta
-#' @param c
-#' @param verbose
+#' @param y A length N numeric vector containing the outcome of interest--if continuous, then this
+#' should be real values; if binary, then a vector of 0's and 1's; if count data, then a vector of integers.
+#' @param X An N x q matrix of the nonlinear predictors, with q either 1 or 2. All entries of X must be
+#' numeric real.
+#' @param Z An N x p matrix of linear predictors. All entries of X should be numeric; therefore, any categorical
+#' predictors should be converted into dummy variables before calling hpr.
+#' @param X_aug An N_aug x q matrix of nonlinear predictors at which interpolations/extrapolations are requested.
+#' @param family The family of the outcome; can be either "gaussian", "binomial", or "poisson". The default is "gaussian".
+#' @param beta_dist If a matrix Z is provided, this is the prior imposed on the coefficients of the linear predictors included
+#' in Z. Can be either "normal" or "cauchy". The default is "normal".
+#' @param beta_mean If a matrix Z is provided, then this is a vector of prior location parameters for the coefficients of the
+#' linear predictors. The default behavior will set all prior locations to be 0.
+#' @param beta_sd If a matrix Z is provided, then this is a vector of prior scale parameters for the coefficients of the
+#' linear predictors. The default behavior will set all prior scales to be 5 times the observed standard deviation for that predictor.
+#' @param beta_df If a matrix Z is provided and the beta distribution is "cauchy", this is a vector containing the degrees of freedom for each Cauchy
+#' prior for each of the coefficients of the linear predictors. The default behavior is to set beta_df to be 1 for all coefficients,
+#' which corresponds to a true Cauchy prior. Larger values of beta_df will yield t distributions with that many degrees of freedom.
+#' @param monotonic_terms A vector of less than length q containing the indices of the nonlinear predictors that should be
+#' constrained to be monotonic. See the vignette for more examples.
+#' @param monotonic_approach An indicator of which approach for constraining monotonicity should be used. The default is "abs" (the
+#' absolute value) which is recommended; users can also specify "exp" (the exponential function) which may have computational challenges.
+#' @param aug_approach An indicator of which approach for data augmentation should be used. The highly recommended default is
+#' "MCMC" which draws from the posterior to generate new augmentation values and local shrinkage parameters. Other options are
+#' "Mean" or "LVCF", which use the mean value of the two neighboring local shrinkage parameters, or the last value of the local
+#' shrinkage parameter to serve as the local shrinkage at the augmentation point, then inputs this value via Gaussian kriging equations.
+#' For more details, see Chase et al. (2022+). Again, we highly discourage the use of any approach other than "MCMC".
+#' @param new_X An N_new x q matrix of locations at which posterior predictions are requested. Note that all entries in this
+#' matrix must already appear in either X or X_aug in order for posterior predictions to be generated.
+#' @param new_Z An N_new x p matrix of linear predictor values at which posterior predictions are requested, corresponding to
+#' the nonlinear predictor values input in new_X.
+#' @param seed A number that will be passed to the Stan MCMC to make it possible to generate identical results on future runs.
+#' @param chains The number of chains used for Hamiltonian MCMC; the default is 4. We do not recommend modifying this parameter
+#' unless you know what you're doing.
+#' @param iter_warmup The number of samples for warmup per chain. These samples will not be included for posterior estimation.
+#' The default is 1000 (so 1000 x 4 chains = 4000 warmup samples). We do not recommend modifying this parameter unless you know
+#' what you're doing.
+#' @param iter_sampling The number of posterior samples per chain. The default is 2000 (so 2000 x 4 chains = 8000 posterior samples).
+#' We do not recommend modifying this parameter unless you know what you're doing.
+#' @param max_treedepth The max_treedepth parameter passed to the NUTS algorithm within the Hamiltonian MCMC. The default value is
+#' 12. We do not recommend modifying this parameter unless you know what you're doing.
+#' @param adapt_delta The adapt_delta parameter passed to the Hamiltonian MCMC, which helps to set the step size of the MCMC. The default
+#' value is 0.95. We do not recommend modifying this parameter unless you know what you're doing.
+#' @param c The scale parameter of the half-Cauchy prior placed on the global shrinkage parameter. The default is 0.01, which we have
+#' found yields reasonably good performance. In general, we find that this parameter does not make much difference except in the
+#' case of very sparse data, in which case changes in c can make a big difference. We recommend trying several values of c to
+#' explore sensitivity of results.
+#' @param verbose A logical value indicating whether or not you would like to print updates on Stan sampling progress. The default is
+#' verbose = FALSE.
 #'
-#' @return
+#' @return The function returns a named list with the following contents:
+#' \describe{
+#'    \item{stan_object}{the finished Stan modeling object}
+#'    \item{run_time}{the length of time needed for HMC sampling, in seconds}
+#'    \item{model_file}{a character string containing the name of the Stan model file that was used}
+#'    \item{seed}{either the value of seed input by user, or the value of a seed that was randomly generated within hpr}
+#'    \item{grid}{the unique, ordered values of each column of X and X_aug}
+#'    \item{treedepth}{the value of max_treedepth as input by the user}
+#'    \item{adapt_delta}{the value of adapt_delta as input by the user}
+#' }
 #'
 #' @examples
+#'X <- as.matrix(dat$Day, ncol = 1)
+#'y <- dat$Temperature
+#'
+#'mymodel <- hpr(y = y, X = X, family = "gaussian")
+#'
+#'mymodel_monotonic <- hpr(y = y, X = X, family = "gaussian",
+#'monotonic_terms = c(1), monotonic_approach = "abs")
+#'
+#'Z <- as.matrix(dat$Aberration, ncol = 1)
+#'
+#'mymodel2 <- hpr(y = y, X = X, Z = Z, new_X = X, new_Z = Z,
+#'family = "gaussian", beta_dist = "cauchy")
 #'
 #' @importFrom dplyr near case_when
 #' @importFrom stats quantile sd plogis qlogis

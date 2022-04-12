@@ -1,0 +1,239 @@
+---
+title: "How to Use HPR: Basal Body Temperature Example"
+output: rmarkdown::pdf_document
+vignette: >
+  %\VignetteIndexEntry{HPR-BBT}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+header-includes:
+  - \usepackage{bm}
+  - \usepackage{amssymb}
+  - \usepackage{amsmath}
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+## Overview of horseshoe process regression 
+
+Horseshoe process regression (HPR) is a method for fitting an association between a predictor and an outcome that exhibits abrupt changes in variance: associations that might look like step functions, or piecewise linear functions with sharp changes in concavity. To do so, HPR imposes a discrete approximation of a horseshoe process prior on the association. To do so, we use the model:
+
+Let $y_i$ be some outcome observed for patients $i = 1, ..., n$ at continuous predictor value $x_i$. We restrict $y_i$ to be distributed as either Gaussian, Bernoulli, or Poisson. Define $\bf{x}, \bf{y}$ as the corresponding length $n$ vectors of these observations. Let $\bf{z}_i$ be a length $p$ vector of linear predictors of $y_i$ for each subject, yielding an $n$ x $p$ matrix $\bf{Z}$ of covariates. Define $\bf{t}$ as a length $m$ vector containing the unique, ordered values of $\bf{x}$. Suppose that $x_i = t_j$. Then we define our HPR model as:
+$$
+\begin{aligned}
+g(E(y_i)) &= f_j = \alpha + \bm{\beta}\bf{z}_i + \sum_{k = 1}^j h_k \\
+h_k &\sim N(0, \tau_h^2\lambda_k^2(t_k - t_{k-1})), \ k = 2, ..., m  \\
+h_1 &= 0 \\
+\tau_h &\sim C^+(0,c)  \\
+\lambda_k &\,{\buildrel iid \over \sim}\, C^+(0,1), k = 2, ..., m \\
+\alpha &\sim N(a, b^2) \\
+\bm{\beta} &\sim N(\bm{0}, \bf{d}^2)
+\end{aligned}
+$$
+This corresponds to placing a horseshoe prior on the first order differences of $\bf{f}$ and approximates placing a horseshoe prior on the first derivative of the association we wish to model. In general, the $\lambda_k$ values will be small, resulting  in long stretches of near-constant values of $\bf{f}$, punctuated by abrupt steps which may be quite large when large values of $\lambda_k$ are supported by the data. 
+
+The process starts at a y-intercept $\alpha$, which has a normal prior placed on it. The $g(E(y_i))$ formulation allows for non-Gaussian data through the use of an appropriate transformation $g$. We use a logit transformation and Bernoulli likelihood for binary outcomes and a log transformation and Poisson likelihood for count data. We allow for linear predictors $\bf{Z}$, which can be either continuous or categorical; categorical predictors would need to be converted to a dummy parameterization. The model also allows for multiple observations at the same $t_j$ value and does not require the $\bf{t}$ values to be evenly spaced. 
+
+We also provide extensions to constrain the nonlinear association between $\bm{x}$ and $\bm{y}$ to be monotonic increasing, and to permit for sampling of $\bm{f}$ at unobserved values of $\bm{x}$ (e.g. interpolation, extrapolation). We also provide a function to perform posterior prediction.
+
+All models are fit using Hamiltonian Monte Carlo (HMC) via Stan and the package \texttt{cmdstanr} through R, within this package, \texttt{HPR}. For more details on HPR, please see Chase, Taylor, and Boonstra (2022+).
+
+\newpage
+
+## Using the hpr package
+
+Here, we will use \texttt{HPR} to fit women's basal body temperature (BBT) data abstracted from Toni Weschler's *Taking Charge of Your Fertility*. First, we load both the HPR package and the basal body temperature data. 
+
+```{r}
+library(HPR)
+library(tidyverse)
+
+data(bbt_data, package = "HPR")
+head(bbt_data)
+```
+
+The BBT data has 5 variables: 
+
+- Name: the name of the woman (these are made-up names)
+
+- Day: what day of the menstrual cycle her temperature was recorded
+
+- Temperature: her basal body temperature reading, in Fahrenheit
+
+- Mucus: if provided, her cervical mucus consistency, with values "n" for none, "l" for low quantities of sticky mucus, "m" for medium quantities of smooth mucus, and "h" for high quantities of egg-white-type mucus
+
+- Aberration: whether there was some aberration with her temperature reading (heavy drinking, illness, temperature taken late in the day rather than first thing in the morning, etc.), with 0 or \texttt{NA} for no aberration and 1 for an aberration
+
+Let's look at the data for a single woman ("Author"). 
+```{r}
+author_dat <- filter(bbt_data, Name == "Author")
+
+ggplot(data = author_dat) + 
+  geom_point(aes(x = Day, y = Temperature)) + 
+  theme_bw() + 
+  xlab("Day of Menstrual Cycle") + 
+  scale_y_continuous("Basal Body Temperature (F)") + 
+  theme(legend.position = "bottom", text=element_text(size=12))
+```
+We see that these data look like a good candidate for HPR, because we have a set of measurements (before day 24) that seems to be centered around 97.25 degrees, and a second set of measurements (day 25 and onwards) that appears centered around 98.25 degrees, with an abrupt change from one temperature to the other. This also matches our subject-knowledge of women's BBT trajectories: there's an abrupt increase in temperature immediately following ovulation, followed by a sudden drop in temperature with the onset of a menstrual period. 
+
+Let's try to fit a simple HPR for Author's data. Here, we use day as our nonlinear predictor and temperature as our outcome. Because temperature is continuous, we use a Gaussian likelihood. Note that the predictor has to be input as a numeric matrix \texttt{X}, with a column for each nonlinear predictor (we just have a single nonlinear predictor, so this is a one-column matrix). The outcome, \texttt{y} is a numeric vector.
+```{r}
+X <- as.matrix(author_dat$Day, ncol = 1)
+y <- author_dat$Temperature
+
+author_hpr <- hpr(y = y, X = X, family = "gaussian")
+```
+
+We check model diagnostics to see if there's anything worrisome:
+```{r}
+get_diagnostics(author_hpr)
+```
+We can see that we had some Stan divergences, but because they made up <5\% of overall samples and the other diagnostics are clean, it is likely to safe to ignore them for our model (for a longer discussion of this issue, see Chase et al. (2022+)). The other diagnostics include:
+
+- the number of \texttt{max}\_\texttt{treedepth} warnings from the Stan sampler (ideally close to 0, as larger values suggest inefficient sampling)
+
+- \texttt{Rhat}: the number of parameters that had $\hat{R}$ values greater than 1.1. $\hat{R}$ estimates mixing across the chains and the stability of posterior sampling; ideally we would like this to be 0
+
+- the minimum effective sample sizes across all parameters in both the bulk of the posterior (\texttt{min}\_\texttt{ess}\_\texttt{bulk}) and the tails of the posterior (\texttt{min}\_\texttt{ess}\_\texttt{tail})--we would like this to be large and ideally larger than ~300
+
+- \texttt{num}\_\texttt{param} gives the number of parameters, which here is the number of unique predictions generated by the model (itself a function of the local shrinkage parameters, global shrinkage parameter, normal increments, and y-intercept)
+
+- \texttt{num}\_\texttt{samples} gives the total number of MCMC samples 
+
+- \texttt{time} gives the computing time
+
+Now that we've reviewed our diagnostics, we can get estimates of $\bm{f}$ using the function \texttt{get}\_\texttt{preds} and plot them using ggplot:
+```{r}
+author_results <- get_preds(author_hpr, alpha = 0.05)
+author_results$x <- author_dat$Day
+
+author_plot <- ggplot(data = author_results) + 
+  geom_line(aes(x = x, y = Median)) + 
+  geom_ribbon(aes(x = x, ymin = Lower, ymax = Upper), alpha = 0.2) + 
+  theme_bw() + 
+  geom_point(data = author_dat, aes(x = Day, y = Temperature), alpha = 0.5, 
+             size = 0.5) + 
+  xlab("Day of Menstrual Cycle") + 
+  scale_y_continuous("Basal Body Temperature (Fahrenheit)") +
+  theme(legend.position = "bottom", text=element_text(size=12))
+
+author_plot
+```
+We see that the fit we get exhibits HPR's classic step-function type behavior, and it appears that the time of ovulation (which occurs immediately before the temperature increase) likely occurred on day 24 of the menstrual cycle.
+
+If we omit the final datapoint of Author's cycle (the measurement on day 39) which was taken on the day that the next period started and indicates the start of the next menstrual cycle, we might wish to constrain this function fit to be monotonic increasing, because we know that temperature will only increase during the menstrual cycle. To do this, we tell \texttt{hpr} the column index of the nonlinear predictor that we want to constrain (since we only have a single nonlinear predictor, this is easy: 1) and how we want to constrain monotonicity. In keeping with the recommendations from Chase et al. (2022+), we will use the absolute value function to impose monotonicity, using option \texttt{"abs"}. (We could also use option \texttt{"exp"} to impose monotonicity, which uses exponentiation, but this is not recommended for computational reasons). 
+```{r}
+author_dat_nolast <- filter(author_dat, Day != 39)
+X_nolast <- as.matrix(author_dat_nolast$Day, ncol = 1)
+y_nolast <- author_dat_nolast$Temperature
+
+author_hpr_monoton <- hpr(y = y_nolast, X = X_nolast, family = "gaussian", 
+                          monotonic_terms = c(1), monotonic_approach = "abs")
+```
+
+Diagnostics:
+```{r}
+get_diagnostics(author_hpr_monoton)
+```
+
+And the estimated trajectory:
+```{r}
+author_results_mono <- get_preds(author_hpr_monoton, alpha = 0.05)
+author_results_mono$x <- author_dat_nolast$Day
+
+author_plot_mono <- ggplot(data = author_results_mono) + 
+  geom_line(aes(x = x, y = Median)) + 
+  geom_ribbon(aes(x = x, ymin = Lower, ymax = Upper), alpha = 0.2) + 
+  theme_bw() + 
+  geom_point(data = author_dat_nolast, aes(x = Day, y = Temperature), alpha = 0.5, 
+             size = 0.5) + 
+  xlab("Day of Menstrual Cycle") + 
+  scale_y_continuous("Basal Body Temperature (Fahrenheit)") +
+  theme(legend.position = "bottom", text=element_text(size=12))
+
+author_plot_mono
+```
+We see that the day of ovulation is still estimated to be day 24, although the model fit is more aggressively increasing--this may be a stronger assumption than we want to make in this setting. 
+
+Switching to a different woman, let's take a look at Tracy's data. From looking at a scatterplot of her data, we notice that Tracy had a strange spike in temperature on days 8-10 of her cycle. 
+```{r}
+tracy_dat <- filter(bbt_data, Name == "Tracy")
+
+ggplot(data = tracy_dat) + 
+  geom_point(aes(x = Day, y = Temperature)) + 
+  theme_bw() + 
+  xlab("Day of Menstrual Cycle") + 
+  scale_y_continuous("Basal Body Temperature (Fahrenheit)") +
+  theme(legend.position = "bottom", text=element_text(size=12))
+```
+
+Reviewing the data, we see that she reported an aberration (she was sick) on days 8-10:
+```{r}
+head(tracy_dat, n = 10)
+```
+Maybe we want to include aberration as a linear predictor, in the hopes of recovering her true ovulation time and the underlying fever-free trajectory. We do that by providing aberration as a linear predictor in the \texttt{Z} matrix option. Although we could stick with \texttt{hpr}'s default priors for the aberration coefficient, we're instead going to use a Cauchy prior (rather than the default normal prior), although we'll keep the default setting of a location of 0 and a scale parameter equal to 5 times the standard deviation of Tracy's aberration data.
+
+Because we know we want to recover the fever-free trajectory, we're also going to include her \texttt{X} matrix and a hypothetical fever-free \texttt{Z} matrix using the \texttt{new}\_\texttt{X}, \texttt{new}\_\texttt{Z} parameters of \texttt{hpr}. Note that we *have* to include values of \texttt{X} and \texttt{Z} at which we want predictions in the original \texttt{hpr} call--we can't add that in after the fact, unfortunately.
+```{r}
+X <- as.matrix(tracy_dat$Day, ncol = 1)
+y <- tracy_dat$Temperature
+Z <- as.matrix(tracy_dat$Aberration, ncol = 1)
+nofever_Z <- as.matrix(rep(0, nrow(tracy_dat)), ncol = 1)
+
+tracy_hpr <- hpr(y = y, X = X, Z = Z, new_X = X, new_Z = nofever_Z, family = "gaussian", 
+                 beta_dist = "cauchy")
+```
+
+Our diagnostics:
+```{r}
+get_diagnostics(tracy_hpr)
+```
+
+We can look at the estimate of the coefficient of Aberration using the \texttt{get}\_\texttt{betas} function:
+```{r}
+get_betas(tracy_hpr)
+```
+We see that Tracy's fever increased her temperature by 2.87 (2.44, 3.26) degrees Fahrenheit.
+
+We can also get estimates of the linear predictor of the HPR model for the observed data using the \texttt{get}\_\texttt{preds} function, which would allow us to look at residuals.
+```{r}
+tracy_linpreds <- get_preds(tracy_hpr)
+tracy_dat$Residual <- tracy_dat$Temperature - tracy_linpreds$Median
+
+ggplot(data = tracy_dat) + 
+  geom_point(aes(x = Day, y = Residual)) + 
+  theme_bw() + 
+  xlab("Day of Menstrual Cycle") + 
+  scale_y_continuous("Residuals") + 
+  theme(legend.position = "bottom", text=element_text(size=12))
+```
+
+It looks like the function fit is generally cutting through the center of the observed data, although it isn't fully accommodating the fever spike on day 9, likely due to the shrinkage imposed by HPR. 
+
+And we review our fever-free posterior predictions using the \texttt{post}\_\texttt{predict} function:
+```{r}
+tracy_feverfree <- post_predict(tracy_hpr)
+tracy_feverfree$x <- tracy_dat$Day
+
+tracy_feverfree_plot <- ggplot(data = tracy_feverfree) + 
+  geom_line(aes(x = x, y = Median)) + 
+  geom_ribbon(aes(x = x, ymin = Lower, ymax = Upper), alpha = 0.2) + 
+  theme_bw() + 
+  geom_point(data = tracy_dat, aes(x = Day, y = Temperature), alpha = 0.5, 
+             size = 0.5) + 
+  xlab("Day of Menstrual Cycle") + 
+  scale_y_continuous("Basal Body Temperature (F)") +
+  theme(legend.position = "bottom", text=element_text(size=12))
+
+tracy_feverfree_plot
+```
+We see that the temperature spike is largely smoothed out in the fever-free predictions, with estimated ovulation occurring on day 20. Because these are posterior predictions, though, the uncertainty is a bit wider than what we would obtain from the \texttt{get}\_\texttt{preds} function.
+
+## A note on computation
+
+Because of how the Stan scripts are incorporated into this package, they have to be compiled the first time any new model script is run. \texttt{HPR} includes 13 different Stan scripts, some of which you may never use. (This vignette uses 2 of the 13 scripts.) If you are using a Stan script that you haven't used before, compilation will happen automatically, but note that computation times on that initial run may be 15-30 seconds longer than they normally would be, as the Stan script is first compiled and then run. 

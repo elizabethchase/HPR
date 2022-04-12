@@ -1,25 +1,34 @@
-#' Function to extract the predicted horseshoe curve fits from an HPR model
+#' Function to extract posterior predictions from an HPR model. Note that these are
+#' posterior predictions; if you want estimates of the estimated trajectory f
+#' (the systematic model component), use get_preds.
 #'
-#' @param object
-#' @param orig_X
-#' @param new_X
-#' @param new_Z
-#' @param alpha
+#' @param object The results object from a run of hpr, for which a new_X and
+#' new_Z matrix were input.
+#' @param alpha The uncertainty level for posterior prediction intervals; the
+#' default is 0.05 (which corresponds to 95\% prediction intervals).
 #'
-#' @return
+#' @return A dataframe with N_new rows (corresponding to the values of new_X, new_Z) and columns:
+#' \describe{
+#'    \item{Mean}{the mean of the posterior prediction samples}
+#'    \item{Median}{the median of the posterior prediction samples}
+#'    \item{Lower}{the alpha/2 percentile of the posterior prediction samples}
+#'    \item{Upper}{the 1-alpha/2 percentile of the posterior prediction samples}
+#' }
 #'
 #' @examples
+#' X <- as.matrix(dat$Day, ncol = 1)
+#' y <- dat$Temperature
 #'
-#' @importFrom dplyr near select
+#' mymodel <- hpr(y = y, X = X, family = "gaussian", new_X = X)
+#' post_preds <- post_predict(mymodel)
+#' post_preds$x <- dat$Day
+#'
+#' @importFrom dplyr select
 #' @importFrom stats plogis quantile
 #' @importFrom posterior as_draws_df
-#' @importFrom mgcv rmvn
 #' @import cmdstanr
 #' @export
-predict.hpr <- function(object = NULL,
-                  orig_X = NULL,
-                  new_X = NULL,
-                  new_Z = NULL,
+post_predict <- function(object = NULL,
                   alpha = 0.05
 ){
   family <- strsplit(object$model_file, "[_]")[[1]][1]
@@ -54,5 +63,4 @@ predict.hpr <- function(object = NULL,
   }
 
   return(preds)
-
 }
