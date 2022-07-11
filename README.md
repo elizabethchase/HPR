@@ -25,3 +25,7 @@ by running the command `install.packages("devtools")` followed by
 
 If you are still having trouble, we recommend checking that you have updated to the latest
 versions of both R and RStudio and then attempt reinstallation.
+
+To get faster run-times from **HPR**, we recommend using parallelization by running the command
+`options(mc.cores=3)` prior to running any of the models in **HPR**. (3 cores is just an example;
+feel free to use more or less as your computer allows.)
