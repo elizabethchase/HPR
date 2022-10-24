@@ -200,7 +200,7 @@ hpr <- function(y = NULL,
     }
     if (is.null(new_Z)){
       N_new <- 1
-      new_covariates <- as.matrix(covariates[1,], nrow = 1)
+      new_covariates <- as.matrix(covariates[1,], nrow = 1, ncol = p)
     } else{
       N_new <- nrow(new_Z)
       scale_new_Z <- matrix(NA, nrow = nrow(new_Z), ncol = ncol(new_Z))
