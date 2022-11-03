@@ -189,9 +189,8 @@ hpr <- function(y = NULL,
 
   if (!is.null(Z)){
     p <- ncol(Z)
-    #covariates <- as.matrix(scale(Z, scale = FALSE))
-    covariates <- Z
-    #scale_means <- colMeans(Z)
+    covariates <- as.matrix(scale(Z, scale = FALSE))
+    scale_means <- colMeans(Z)
     has_covs <- 1
     if(beta_dist=="cauchy"){
       cauchy_beta <- 1
@@ -203,12 +202,11 @@ hpr <- function(y = NULL,
       new_covariates <- as.matrix(t(covariates[1,]), nrow = 1, ncol = p)
     } else{
       N_new <- nrow(new_Z)
-      #scale_new_Z <- matrix(NA, nrow = nrow(new_Z), ncol = ncol(new_Z))
-      #for (i in 1:ncol(Z)){
-       # scale_new_Z[,i] <- new_Z[,i] - scale_means[i]
-      #}
-      #new_covariates <- as.matrix(scale_new_Z)
-      new_covariates <- new_Z
+      scale_new_Z <- matrix(NA, nrow = nrow(new_Z), ncol = ncol(new_Z))
+      for (i in 1:ncol(Z)){
+        scale_new_Z[,i] <- new_Z[,i] - scale_means[i]
+      }
+      new_covariates <- as.matrix(scale_new_Z)
     }
   } else{
     p <- 1
@@ -449,7 +447,7 @@ hpr <- function(y = NULL,
      dat$samp_mean <- qlogis(mean(trunc_y))
      dat$samp_sd = sd(qlogis(trunc_y))
      dat$beta_mean <- beta_mean
-     dat$beta_sd <- beta_sd
+     dat$beta_sd <- log(beta_sd)
      dat$beta_df <- beta_df
      dat$cauchy_beta <- cauchy_beta
 
@@ -464,7 +462,7 @@ hpr <- function(y = NULL,
      dat$samp_mean <- log(mean(y_obs))
      dat$samp_sd = sd(log(y_obs+0.5))
      dat$beta_mean <- beta_mean
-     dat$beta_sd <- beta_sd
+     dat$beta_sd <- log(beta_sd)
      dat$beta_df <- beta_df
      dat$cauchy_beta <- cauchy_beta
 
