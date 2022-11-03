@@ -186,12 +186,12 @@ hpr <- function(y = NULL,
 
   N_obs <- nrow(X)
   y_obs <- y
-  #y <- as.numeric(scale(mydata$Visits_twovar, scale = FALSE))
 
   if (!is.null(Z)){
     p <- ncol(Z)
-    covariates <- as.matrix(scale(Z, scale = FALSE))
-    scale_means <- colMeans(Z)
+    #covariates <- as.matrix(scale(Z, scale = FALSE))
+    covariates <- Z
+    #scale_means <- colMeans(Z)
     has_covs <- 1
     if(beta_dist=="cauchy"){
       cauchy_beta <- 1
@@ -203,11 +203,12 @@ hpr <- function(y = NULL,
       new_covariates <- as.matrix(t(covariates[1,]), nrow = 1, ncol = p)
     } else{
       N_new <- nrow(new_Z)
-      scale_new_Z <- matrix(NA, nrow = nrow(new_Z), ncol = ncol(new_Z))
-      for (i in 1:ncol(Z)){
-        scale_new_Z[,i] <- new_Z[,i] - scale_means[i]
-      }
-      new_covariates <- as.matrix(scale_new_Z)
+      #scale_new_Z <- matrix(NA, nrow = nrow(new_Z), ncol = ncol(new_Z))
+      #for (i in 1:ncol(Z)){
+       # scale_new_Z[,i] <- new_Z[,i] - scale_means[i]
+      #}
+      #new_covariates <- as.matrix(scale_new_Z)
+      new_covariates <- new_Z
     }
   } else{
     p <- 1
