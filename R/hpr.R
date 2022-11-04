@@ -136,9 +136,9 @@ hpr <- function(y = NULL,
     if (is.null(beta_mean)){
       beta_mean <- rep(0.0, ncol(Z))
     }
-    if (is.null(beta_sd)){
-      beta_sd <- apply(Z, 2, sd)
-    }
+    #if (is.null(beta_sd)){
+    #  beta_sd <- apply(Z, 2, sd)
+    #}
     if (is.null(beta_df)){
       beta_df <- rep(1.0, ncol(Z))
     }
@@ -417,7 +417,7 @@ hpr <- function(y = NULL,
        mymodel <- cmdstan_model(system.file("stan", "gaussian_multi.stan", package = "HPR"))
        model_file <- "gaussian_multi.stan"
        dat$beta_mean <- beta_mean
-       dat$beta_sd <- beta_sd
+       dat$beta_sd <- apply(Z, 2, sd)
        dat$beta_df <- beta_df
        dat$cauchy_beta <- cauchy_beta
      } else{
@@ -425,7 +425,7 @@ hpr <- function(y = NULL,
          mymodel <- cmdstan_model(system.file("stan", "gaussian_uni.stan", package = "HPR"))
          model_file <- "gaussian_uni.stan"
          dat$beta_mean <- beta_mean
-         dat$beta_sd <- beta_sd
+         dat$beta_sd <- apply(Z, 2, sd)
          dat$beta_df <- beta_df
          dat$cauchy_beta <- cauchy_beta
        } else if (aug_approach=="LVCF"){
@@ -447,7 +447,7 @@ hpr <- function(y = NULL,
      dat$samp_mean <- qlogis(mean(trunc_y))
      dat$samp_sd = sd(qlogis(trunc_y))
      dat$beta_mean <- beta_mean
-     dat$beta_sd <- log(beta_sd)
+     dat$beta_sd <- apply(Z, 2, sd)
      dat$beta_df <- beta_df
      dat$cauchy_beta <- cauchy_beta
 
@@ -462,7 +462,7 @@ hpr <- function(y = NULL,
      dat$samp_mean <- log(mean(y_obs))
      dat$samp_sd = sd(log(y_obs+0.5))
      dat$beta_mean <- beta_mean
-     dat$beta_sd <- log(beta_sd)
+     dat$beta_sd <- apply(log(Z+0.5), 2, sd)
      dat$beta_df <- beta_df
      dat$cauchy_beta <- cauchy_beta
 
