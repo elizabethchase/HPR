@@ -36,6 +36,7 @@ get_betas <- function(object = NULL,
   has_covs <- object$data$has_covs
   p <- object$data$p
   scales <- object$scale_sd
+  cont_preds <- c(1:p)[-object$bin_preds]
   if (has_covs==0){stop("This model object has no linear coefficients.")}
   lower <- alpha/2
   upper <- 1-(alpha/2)
@@ -43,7 +44,7 @@ get_betas <- function(object = NULL,
 
   my_summary <- dplyr::select(as_draws_df(object$stan_object$draws("beta")), -.iteration, -.chain, -.draw)
   for(i in 1:p){
-    my_summary[,i] <- my_summary[,i]*scales[i]
+      my_summary[,cont_preds[i]] <- my_summary[,cont_preds[i]]*scales[i]
   }
 
   if (family=="gaussian"){

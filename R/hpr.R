@@ -231,6 +231,9 @@ hpr <- function(y = NULL,
     beta_mean <- 0
     beta_sd <- 1
     beta_df <- 1
+    scale_means <- NULL
+    scale_sd <- NULL
+    bin_preds <- NULL
     if (is.null(new_X)){
       N_new <- 1
       new_covariates <- as.matrix(rep(0, N_new), nrow = N_new, ncol = 1)
@@ -524,7 +527,8 @@ hpr <- function(y = NULL,
     "treedepth" = max_treedepth,
     "adapt_delta" = adapt_delta,
     "scale_means" = scale_means,
-    "scale_sd" = scale_sd
+    "scale_sd" = scale_sd,
+    "bin_pred" = bin_preds
   )
 
   return(outputs)
