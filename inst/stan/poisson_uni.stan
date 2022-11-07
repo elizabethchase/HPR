@@ -1,10 +1,10 @@
 data {
   int<lower=0> N_obs;
   int<lower=0> N_mis;
-  int<lower=0> y_obs[N_obs];
+  array[N_obs] int<lower=0> y_obs;
   int<lower=0> m;
-  int<lower = 1, upper = m> ind[N_obs];
-  int<lower = 1, upper = m> missing_ind[N_mis];
+  array[N_obs] int<lower = 1, upper = m> ind;
+  array[N_mis] int<lower = 1, upper = m> missing_ind;
   vector<lower = 0>[m-1] diff;
   int<lower=0> p;
   matrix[N_obs, p] X;
@@ -21,7 +21,7 @@ data {
   vector<lower=1.0>[p] beta_df;
   int<lower=0,upper=1> cauchy_beta;
   int<lower=0> N_new;
-  int<lower=1, upper=m> new_ind[N_new];
+  array[N_new] int<lower=1, upper=m> new_ind;
   matrix[N_new, p] new_X;
 }
 
@@ -48,9 +48,9 @@ transformed parameters {
   vector[N_obs] f;
   vector[p] beta;
     if (cauchy_beta){
-      beta = ((5 * beta_sd .* beta_sub1) ./ sqrt(beta_sub2)) + beta_mean;
+      beta = ((beta_sd .* beta_sub1) ./ sqrt(beta_sub2)) + beta_mean;
     } else{
-      beta = (5 * beta_sd .* beta_sub1) + beta_mean;
+      beta = (beta_sd .* beta_sub1) + beta_mean;
     }
     eta[1] = 0;
     lambda = lambda_loc1 .* sqrt(lambda_loc2);
@@ -59,7 +59,7 @@ transformed parameters {
       if (exp_approach){
         eta[2:m] = exp(tau_glob * lambda .* gamma_aux .* sqrt_diff);
       } else{
-        eta[2:m] = fabs(tau_glob * lambda .* gamma_aux .* sqrt_diff);
+        eta[2:m] = abs(tau_glob * lambda .* gamma_aux .* sqrt_diff);
       }
     } else{
       eta[2:m] = tau_glob * lambda .* gamma_aux .* sqrt_diff;

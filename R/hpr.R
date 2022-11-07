@@ -23,7 +23,9 @@
 #' @param beta_mean If a matrix Z is provided, then this is a vector of prior location parameters for the coefficients of the
 #' linear predictors. The default behavior will set all prior locations to be 0.
 #' @param beta_sd If a matrix Z is provided, then this is a vector of prior scale parameters for the coefficients of the
-#' linear predictors. The default behavior will set all prior scales to be 5 times the observed standard deviation for that predictor.
+#' linear predictors. For continuous outcomes, the predictors are scaled to have standard deviation = 1.0 and the default
+#' is to set beta_sd = 5; for binary/count outcomes the predictors are scaled to have standard deviation of 0.5 and
+#' the default is beta_sd = 2.5.
 #' @param beta_df If a matrix Z is provided and the beta distribution is "cauchy", this is a vector containing the degrees of freedom for each Cauchy
 #' prior for each of the coefficients of the linear predictors. The default behavior is to set beta_df to be 1 for all coefficients,
 #' which corresponds to a true Cauchy prior. Larger values of beta_df will yield t distributions with that many degrees of freedom.
@@ -136,9 +138,14 @@ hpr <- function(y = NULL,
     if (is.null(beta_mean)){
       beta_mean <- rep(0.0, ncol(Z))
     }
-    #if (is.null(beta_sd)){
-    #  beta_sd <- apply(Z, 2, sd)
-    #}
+
+    if (is.null(beta_sd)){
+      if (family=="gaussian"){
+        beta_sd <- rep(5.0, ncol(Z))
+      } else if (family=="binomial" | family=="poisson"){
+        beta_sd <- rep(2.5, ncol(Z))
+      }
+     }
     if (is.null(beta_df)){
       beta_df <- rep(1.0, ncol(Z))
     }
@@ -189,8 +196,18 @@ hpr <- function(y = NULL,
 
   if (!is.null(Z)){
     p <- ncol(Z)
-    covariates <- as.matrix(scale(Z, scale = FALSE))
-    scale_means <- colMeans(Z)
+    bin_preds <- which(apply((Z==0 | Z==1), 2, all))
+    covariates <- as.matrix(Z)
+
+    if (family=="gaussian"){
+      covariates[, -bin_preds] <- scale(covariates[,-bin_preds])
+      scale_sd <- apply(Z[,-bin_preds], 2, sd)
+    } else if (family=="poisson" | family=="binomial"){
+      covariates[, -bin_preds] <- scale(covariates[,-bin_preds])*0.5
+      scale_sd <- apply(Z[,-bin_preds], 2, sd)*2
+    }
+
+    scale_means <- colMeans(Z[,-bin_preds])
     has_covs <- 1
     if(beta_dist=="cauchy"){
       cauchy_beta <- 1
@@ -202,11 +219,9 @@ hpr <- function(y = NULL,
       new_covariates <- as.matrix(t(covariates[1,]), nrow = 1, ncol = p)
     } else{
       N_new <- nrow(new_Z)
-      scale_new_Z <- matrix(NA, nrow = nrow(new_Z), ncol = ncol(new_Z))
-      for (i in 1:ncol(Z)){
-        scale_new_Z[,i] <- new_Z[,i] - scale_means[i]
-      }
-      new_covariates <- as.matrix(scale_new_Z)
+      new_covariates <- matrix(NA, nrow = nrow(new_Z), ncol = ncol(new_Z))
+      new_covariates[,bin_preds] <- new_Z[,bin_preds]
+      new_covariates[,-bin_preds] <- (new_Z[,-bin_preds] -scale_means)/scale_sd
     }
   } else{
     p <- 1
@@ -417,7 +432,7 @@ hpr <- function(y = NULL,
        mymodel <- cmdstan_model(system.file("stan", "gaussian_multi.stan", package = "HPR"))
        model_file <- "gaussian_multi.stan"
        dat$beta_mean <- beta_mean
-       dat$beta_sd <- apply(Z, 2, sd)
+       dat$beta_sd <- beta_sd
        dat$beta_df <- beta_df
        dat$cauchy_beta <- cauchy_beta
      } else{
@@ -425,7 +440,7 @@ hpr <- function(y = NULL,
          mymodel <- cmdstan_model(system.file("stan", "gaussian_uni.stan", package = "HPR"))
          model_file <- "gaussian_uni.stan"
          dat$beta_mean <- beta_mean
-         dat$beta_sd <- apply(Z, 2, sd)
+         dat$beta_sd <- beta_sd
          dat$beta_df <- beta_df
          dat$cauchy_beta <- cauchy_beta
        } else if (aug_approach=="LVCF"){
@@ -447,7 +462,7 @@ hpr <- function(y = NULL,
      dat$samp_mean <- qlogis(mean(trunc_y))
      dat$samp_sd = sd(qlogis(trunc_y))
      dat$beta_mean <- beta_mean
-     dat$beta_sd <- apply(Z, 2, sd)
+     dat$beta_sd <- beta_sd
      dat$beta_df <- beta_df
      dat$cauchy_beta <- cauchy_beta
 
@@ -462,7 +477,7 @@ hpr <- function(y = NULL,
      dat$samp_mean <- log(mean(y_obs))
      dat$samp_sd = sd(log(y_obs+0.5))
      dat$beta_mean <- beta_mean
-     dat$beta_sd <- apply(log(Z+0.5), 2, sd)
+     dat$beta_sd <- beta_sd
      dat$beta_df <- beta_df
      dat$cauchy_beta <- cauchy_beta
 
@@ -507,7 +522,9 @@ hpr <- function(y = NULL,
     "seed" = seed,
     "grid" = grid,
     "treedepth" = max_treedepth,
-    "adapt_delta" = adapt_delta
+    "adapt_delta" = adapt_delta,
+    "scale_means" = scale_means,
+    "scale_sd" = scale_sd
   )
 
   return(outputs)

@@ -35,12 +35,16 @@ get_betas <- function(object = NULL,
   family <- strsplit(object$model_file, "[_]")[[1]][1]
   has_covs <- object$data$has_covs
   p <- object$data$p
+  scales <- object$scale_sd
   if (has_covs==0){stop("This model object has no linear coefficients.")}
   lower <- alpha/2
   upper <- 1-(alpha/2)
   if (is.null(var_names)){var_names <- 1:p}
 
   my_summary <- dplyr::select(as_draws_df(object$stan_object$draws("beta")), -.iteration, -.chain, -.draw)
+  for(i in 1:p){
+    my_summary[,i] <- my_summary[,i]*scales[i]
+  }
 
   if (family=="gaussian"){
     beta_preds <- data.frame("Variable" = var_names,

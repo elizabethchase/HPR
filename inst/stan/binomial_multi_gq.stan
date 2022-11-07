@@ -1,12 +1,12 @@
 data {
   int<lower=0> N_obs;
   int<lower=0> N_mis;
-  int<lower = 0, upper=1> y_obs[N_obs];
+  array[N_obs] int<lower = 0, upper=1> y_obs;
   int<lower = 2> k;
-  int<lower=0> m[k];
+  array[k] int<lower=0> m;
   int<lower=0> max_m;
-  int<lower = 1, upper = max_m> ind[N_obs, k];
-  int<lower = 1, upper = max_m> missing_ind[N_mis, k];
+  array[N_obs, k] int<lower = 1, upper = max_m> ind;
+  array[N_mis, k] int<lower = 1, upper = max_m> missing_ind;
   matrix<lower = 0>[max_m-1, k] diff;
   int<lower=0> p;
   matrix[N_obs, p] X;
@@ -17,8 +17,8 @@ data {
   int<lower=0,upper=1> is_monotone;
   int<lower=0,upper=1> exp_approach;
   int<lower=0,upper=k> q;
-  int<lower=1,upper=k> monotone_inds[q];
-  int<lower=1,upper=k> nonmonotone_inds[k-q];
+  array[q] int<lower=1,upper=k> monotone_inds;
+  array[k-q] int<lower=1,upper=k> nonmonotone_inds;
   real samp_mean;
   real samp_sd;
   vector[p] beta_mean;
@@ -26,7 +26,7 @@ data {
   vector<lower=1.0>[p] beta_df;
   int<lower=0,upper=1> cauchy_beta;
   int<lower=0> N_new;
-  int<lower = 1, upper = max_m> new_ind[N_new, k];
+  array[N_new, k] int<lower = 1, upper = max_m> new_ind;
   matrix[N_new, p] new_X;
 }
 
@@ -56,9 +56,9 @@ transformed parameters {
   vector[N_obs] f;
   vector[p] beta;
     if (cauchy_beta){
-      beta = ((5 * beta_sd .* beta_sub1) ./ sqrt(beta_sub2)) + beta_mean;
+      beta = ((beta_sd .* beta_sub1) ./ sqrt(beta_sub2)) + beta_mean;
     } else{
-      beta = (5 * beta_sd .* beta_sub1) + beta_mean;
+      beta = (beta_sd .* beta_sub1) + beta_mean;
     }
     eta[1,] = rep_row_vector(0,k);
     lambda = lambda_loc1 .* sqrt(lambda_loc2);
@@ -74,7 +74,7 @@ transformed parameters {
       }
       } else{
         for (i in 1:q){
-        eta[2:m[monotone_inds[i]], monotone_inds[i]] = fabs(tau_glob[monotone_inds[i]] * lambda[,monotone_inds[i]] .* gamma_aux[,monotone_inds[i]] .* sqrt_diff[,monotone_inds[i]]);
+        eta[2:m[monotone_inds[i]], monotone_inds[i]] = abs(tau_glob[monotone_inds[i]] * lambda[,monotone_inds[i]] .* gamma_aux[,monotone_inds[i]] .* sqrt_diff[,monotone_inds[i]]);
         eta[m[monotone_inds[i]]+1:max_m, monotone_inds[i]] = rep_vector(0, max_m-monotone_inds[i]);
       } for (j in 1:(k-q)){
         eta[2:m[nonmonotone_inds[j]], nonmonotone_inds[j]] = tau_glob[nonmonotone_inds[j]] * lambda[,nonmonotone_inds[j]] .* gamma_aux[,nonmonotone_inds[j]] .* sqrt_diff[,nonmonotone_inds[j]];
@@ -119,7 +119,7 @@ generated quantities{
   matrix[N_new,k] new_path;
   vector[N_new] new_finalpath;
   vector[N_new] new_f;
-  int<lower = 0, upper=1> new_pred[N_new];
+  array[N_new] int<lower = 0, upper=1> new_pred;
 
   for (i in 1:k){
       new_path[,i] = path[new_ind[,i],i];

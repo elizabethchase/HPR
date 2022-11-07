@@ -1,10 +1,10 @@
 data {
   int<lower=0> N_obs;
   int<lower=0> N_mis;
-  real y_obs[N_obs];
+  array[N_obs] real y_obs;
   int<lower=0> m;
-  int<lower = 1, upper = m> ind[N_obs];
-  int<lower = 1, upper = m-1> nearest[N_mis];
+  array[N_obs] int<lower = 1, upper = m> ind;
+  array[N_mis] int<lower = 1, upper = m-1> nearest;
   vector<lower = 0>[N_mis] miss_diff;
   vector<lower = 0>[m-1] diff;
   int<lower=0> p;
@@ -84,8 +84,8 @@ generated quantities {
   matrix[N_mis, N_mis] diag_delta;
   matrix[N_obs, N_obs] K;
   matrix[N_mis, N_mis] sub_cov;
-  int check1[2];
-  int check2[2];
+  array[2] int check1;
+  array[2] int check2;
 
   var_vec_obs[1] = 0;
   var_vec_obs[2:m] = square(tau_glob) * diff .* square(lambda);
