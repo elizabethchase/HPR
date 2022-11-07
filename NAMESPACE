@@ -2,7 +2,6 @@
 
 export(get_betas)
 export(get_diagnostics)
-export(get_f)
 export(get_preds)
 export(hpr)
 export(post_predict)
