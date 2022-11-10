@@ -22,15 +22,14 @@
 #' y <- dat$Temperature
 #'
 #' mymodel <- hpr(y = y, X = X, family = "gaussian")
-#' my_f <- get_preds(mymodel)
-#' my_f$x <- dat$Day
+#' my_H <- get_H(mymodel)
 #'
 #' @importFrom dplyr near select
 #' @importFrom posterior as_draws_df
 #' @importFrom stats plogis quantile
 #' @import cmdstanr
 #' @export
-get_preds <- function(object = NULL,
+get_H <- function(object = NULL,
                       alpha = 0.05
 ){
   family <- strsplit(object$model_file, "[_]")[[1]][1]

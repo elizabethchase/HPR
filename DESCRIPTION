@@ -25,6 +25,6 @@ Imports:
     Rdpack
 VignetteBuilder: knitr
 RdMacros: Rdpack
-RoxygenNote: 7.1.2
+RoxygenNote: 7.2.1
 Suggests: 
     rmarkdown

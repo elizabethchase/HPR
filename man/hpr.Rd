@@ -50,7 +50,9 @@ in Z. Can be either "normal" or "cauchy". The default is "normal".}
 linear predictors. The default behavior will set all prior locations to be 0.}
 
 \item{beta_sd}{If a matrix Z is provided, then this is a vector of prior scale parameters for the coefficients of the
-linear predictors. The default behavior will set all prior scales to be 5 times the observed standard deviation for that predictor.}
+linear predictors. For continuous outcomes, the predictors are scaled to have standard deviation = 1.0 and the default
+is to set beta_sd = 5; for binary/count outcomes the predictors are scaled to have standard deviation of 0.5 and
+the default is beta_sd = 2.5.}
 
 \item{beta_df}{If a matrix Z is provided and the beta distribution is "cauchy", this is a vector containing the degrees of freedom for each Cauchy
 prior for each of the coefficients of the linear predictors. The default behavior is to set beta_df to be 1 for all coefficients,
