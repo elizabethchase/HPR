@@ -43,8 +43,10 @@ get_betas <- function(object = NULL,
   if (is.null(var_names)){var_names <- 1:p}
 
   my_summary <- dplyr::select(as_draws_df(object$stan_object$draws("beta")), -.iteration, -.chain, -.draw)
-  for(i in 1:length(cont_preds)){
+  if (length(cont_preds) > 0){
+    for(i in 1:length(cont_preds)){
       my_summary[,cont_preds[i]] <- my_summary[,cont_preds[i]]/scales[i]
+    }
   }
 
   if (family=="gaussian"){
