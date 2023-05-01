@@ -21,6 +21,7 @@ data {
   array[k-q] int<lower=1,upper=k> nonmonotone_inds;
   real samp_mean;
   real samp_sd;
+  real sig_scale;
   vector[p] beta_mean;
   vector[p] beta_sd;
   vector<lower=1.0>[p] beta_df;
@@ -66,7 +67,7 @@ transformed parameters {
     eta[1,] = rep_row_vector(0,k);
     lambda = lambda_loc1 .* sqrt(lambda_loc2);
     tau_glob = tau_glob1 .* sqrt(tau_glob2) * alpha_scale_stan;
-    sig = sig1 * sqrt(sig2) * 5;
+    sig = sig1 * sqrt(sig2) * sig_scale;
     if (is_monotone){
       if (exp_approach){
         for (i in 1:q){

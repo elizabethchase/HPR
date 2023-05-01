@@ -58,6 +58,12 @@
 #' found yields reasonably good performance. In general, we find that this parameter does not make much difference except in the
 #' case of very sparse data, in which case changes in c can make a big difference. We recommend trying several values of c to
 #' explore sensitivity of results.
+#' @param sig_scale The scale parameter of the half-Cauchy prior placed on the measurement error parameter in the case of
+#' continuous outcomes. The default is 5.
+#' @param intercept_mean The mean of the normal prior placed on the y-intercept. The default is the sample mean of the (appropriately
+#' transformed) data.
+#' @param intercept_sd The standard deviation of the normal prior placed on the y-intercept. The default is the sample standard deviation
+#' of the (appropriately transformed) data.
 #' @param verbose A logical value indicating whether or not you would like to print updates on Stan sampling progress. The default is
 #' verbose = FALSE.
 #'
@@ -111,6 +117,9 @@ hpr <- function(y = NULL,
                 max_treedepth = 12,
                 adapt_delta = 0.95,
                 c = 0.01,
+                sig_scale = NULL,
+                intercept_mean = NULL,
+                intercept_sd = NULL,
                 verbose = FALSE
                 ){
 
@@ -429,8 +438,24 @@ hpr <- function(y = NULL,
   }
 
    if (family=="gaussian"){
-     dat$samp_mean <- mean(y_obs)
-     dat$samp_sd <- sd(y_obs)
+     if (is.null(intercept_mean)){
+       dat$samp_mean <- mean(y_obs)
+     } else {
+       dat$samp_mean <- intercept_mean
+     }
+
+     if (is.null(intercept_sd)){
+       dat$samp_sd <- sd(y_obs)
+     } else{
+       dat$samp_sd <- intercept_sd
+     }
+
+     if (is.null(sig_scale)){
+       dat$sig_scale <- 5
+     } else{
+       dat$sig_scale <- sig_scale
+     }
+
      if (ncol(X) > 1){
        mymodel <- cmdstan_model(system.file("stan", "gaussian_multi.stan", package = "HPR"))
        model_file <- "gaussian_multi.stan"
@@ -462,8 +487,18 @@ hpr <- function(y = NULL,
        y_obs==0 ~ 0.005
      )
 
-     dat$samp_mean <- qlogis(mean(trunc_y))
-     dat$samp_sd = sd(qlogis(trunc_y))
+     if (is.null(intercept_mean)){
+       dat$samp_mean <- qlogis(mean(trunc_y))
+     } else {
+       dat$samp_mean <- intercept_mean
+     }
+
+     if (is.null(intercept_sd)){
+       dat$samp_sd = sd(qlogis(trunc_y))
+     } else{
+       dat$samp_sd <- intercept_sd
+     }
+
      dat$beta_mean <- beta_mean
      dat$beta_sd <- beta_sd
      dat$beta_df <- beta_df
@@ -477,8 +512,18 @@ hpr <- function(y = NULL,
        model_file <- "binomial_uni.stan"
      }
    } else if (family=="poisson"){
-     dat$samp_mean <- log(mean(y_obs))
-     dat$samp_sd = sd(log(y_obs+0.5))
+     if (is.null(intercept_mean)){
+       dat$samp_mean <- log(mean(y_obs))
+     } else {
+       dat$samp_sd = sd(log(y_obs+0.5))
+     }
+
+     if (is.null(intercept_sd)){
+       dat$samp_sd <- sd(y_obs)
+     } else{
+       dat$samp_sd <- intercept_sd
+     }
+
      dat$beta_mean <- beta_mean
      dat$beta_sd <- beta_sd
      dat$beta_df <- beta_df

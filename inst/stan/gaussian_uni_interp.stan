@@ -15,6 +15,7 @@ data {
   real<lower = 0> alpha_scale_stan; // c, Section 2// dof of pi(lambda), = 1
   real samp_mean;
   real samp_sd;
+  real sig_scale;
   int<lower = 0, upper=1> use_mean;
 }
 
@@ -45,7 +46,7 @@ transformed parameters {
     eta[1] = 0;
     lambda = lambda_loc1 .* sqrt(lambda_loc2);
     tau_glob = tau_glob1 * sqrt(tau_glob2) * alpha_scale_stan;
-    sig = sig1 * sqrt(sig2) * 5;
+    sig = sig1 * sqrt(sig2) * sig_scale;
     eta[2:m] = tau_glob * lambda .* gamma_aux .* sqrt_diff;
     path = cumulative_sum(eta);
     if (has_covs==0){

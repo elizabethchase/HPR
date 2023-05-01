@@ -16,6 +16,7 @@ data {
   int<lower=0,upper=1> exp_approach;
   real samp_mean;
   real samp_sd;
+  real sig_scale;
   vector[p] beta_mean;
   vector[p] beta_sd;
   vector<lower=1.0>[p] beta_df;
@@ -58,7 +59,7 @@ transformed parameters {
     eta[1] = 0;
     lambda = lambda_loc1 .* sqrt(lambda_loc2);
     tau_glob = tau_glob1 * sqrt(tau_glob2) * alpha_scale_stan;
-    sig = sig1 * sqrt(sig2) * 5;
+    sig = sig1 * sqrt(sig2) * sig_scale;
     if (is_monotone){
       if (exp_approach){
         eta[2:m] = exp(tau_glob * lambda .* gamma_aux .* sqrt_diff);
