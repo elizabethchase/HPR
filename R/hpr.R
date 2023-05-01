@@ -515,7 +515,7 @@ hpr <- function(y = NULL,
      if (is.null(intercept_mean)){
        dat$samp_mean <- log(mean(y_obs))
      } else {
-       dat$samp_sd = sd(log(y_obs+0.5))
+       dat$samp_mean <- intercept_mean
      }
 
      if (is.null(intercept_sd)){
