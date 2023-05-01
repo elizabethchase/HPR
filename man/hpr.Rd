@@ -26,6 +26,9 @@ hpr(
   max_treedepth = 12,
   adapt_delta = 0.95,
   c = 0.01,
+  sig_scale = NULL,
+  intercept_mean = NULL,
+  intercept_sd = NULL,
   verbose = FALSE
 )
 }
@@ -98,6 +101,15 @@ value is 0.95. We do not recommend modifying this parameter unless you know what
 found yields reasonably good performance. In general, we find that this parameter does not make much difference except in the
 case of very sparse data, in which case changes in c can make a big difference. We recommend trying several values of c to
 explore sensitivity of results.}
+
+\item{sig_scale}{The scale parameter of the half-Cauchy prior placed on the measurement error parameter in the case of
+continuous outcomes. The default is 5.}
+
+\item{intercept_mean}{The mean of the normal prior placed on the y-intercept. The default is the sample mean of the (appropriately
+transformed) data.}
+
+\item{intercept_sd}{The standard deviation of the normal prior placed on the y-intercept. The default is the sample standard deviation
+of the (appropriately transformed) data.}
 
 \item{verbose}{A logical value indicating whether or not you would like to print updates on Stan sampling progress. The default is
 verbose = FALSE.}
